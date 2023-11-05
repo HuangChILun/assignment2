@@ -1,0 +1,210 @@
+﻿@page "/counter"
+@using System.Text.Json;
+
+<h1 style="text-align: center;">Flight Finder</h1>
+
+<div class="textStyle">
+    <label>From:</label>
+    <input type="text" @bind="searchFrom" />
+</div>
+<div class="textStyle">
+    <label>To:</label>
+    <input type="text" @bind="searchTo" />
+</div>
+<div class="textStyle">
+    <label>Day:</label>
+    <input type="text" @bind="searchDay" />
+</div >
+<div class="textStyle">
+    <button style="width: 350px;" @onclick="SearchFlights">Find Flight</button>
+</div>
+
+<h1 style="text-align: center; margin-top:20px;">Flights</h1>
+<div class="textStyle">
+    <input type="text" style="width: 1475px; margin-top:20px; margin-bottom:40px;" value="@(showFlight)" readonly="readonly">
+</div>
+<h1 style="text-align: center;">Reserve</h1>
+<div class="textStyle" >
+    <label >Flight Code:</label>
+    <input style="width: 1475px;" type="text" value="@(ShowFlightCode)" />
+    <label >Airline:</label>
+    <input style="width: 1475px;" type="text" value="@(ShowAirline)" />
+    <label >Day:</label>
+    <input style="width: 1475px;" type="text" value="@(ShowDay)" />
+    <label >Time:</label>
+    <input style="width: 1475px;" type="text" value="@(ShowTime)" />
+    <label>Cost:</label>
+    <input style="width: 1475px;" type="text" value="@(ShowCost)" />
+    <label>Name:</label>
+    <input style="width: 1475px;" type="text" @bind="ShowName" />
+    <label>Citizenship:</label>
+    <input style="width: 1475px;" type="text" @bind="ShowCitizenship" />
+    
+</div>
+<div style="text-align: center;">
+    <button style="width: 350px; margin: 30px;" @onclick="Reservation">Reserve</button>
+</div>
+<p style="text-align: center">@reservationcode</p>
+<style>
+    .textStyle {
+        display: inline-block;
+        margin-right: 20px;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        margin-right: 5px;
+    }
+    input {
+        width: 350px;
+    }
+</style>
+
+
+
+
+@code {
+    ReservationManager reservationManager = new ReservationManager();
+    FlightInfo flightInfo = new FlightInfo
+        {
+            Flight = "0",
+            FlightCode = "0",
+            Airline = "0",
+            Day = "0",
+            Time = "0",
+            Cost = "0"
+        };
+    //intial
+    public int i;
+    public string reservationcode = "reservation code: ";
+    // above flight
+    private string searchFrom = "any";
+    private string searchTo = "any";
+    private string searchDay = "any";
+    //under flight
+    public string showFlight = "0";
+    //under reserve 
+    public string ShowFlightCode;
+    private string ShowAirline = "";
+    private string ShowDay = "";
+    private string ShowTime = "";
+    public string ShowCost = "0";
+    public string ShowName="";
+    public string ShowCitizenship="";
+    // search button 
+    public string line;
+    public string[] lineSplit = new string[] { };
+
+    public async void SearchFlights()
+    {
+        // List of flight information
+        List<string> FlightCode = new List<string>();
+        List<string> Airline = new List<string>();
+        List<string> ShowsearchFrom = new List<string>();
+        List<string> ShowsearchTo = new List<string>();
+        List<string> Day = new List<string>();
+        List<string> Time = new List<string>();
+        List<string> Cost = new List<string>();
+        // END
+        var stearmCsv = await
+        FileSystem.Current.OpenAppPackageFileAsync("flights.csv");
+        StreamReader sr = new StreamReader(stearmCsv);
+        List<string> flightsList = new List<string>();
+        line = sr.ReadLine();
+        flightsList.Add(line);
+        while (line != null)
+        {
+            lineSplit = line.Split(",");
+            FlightCode.Add(lineSplit[0]);
+            Airline.Add(lineSplit[1]);
+            ShowsearchFrom.Add(lineSplit[2]);
+            ShowsearchTo.Add(lineSplit[3]);
+            Day.Add(lineSplit[4]);
+            Time.Add(lineSplit[5]);
+            Cost.Add(lineSplit[7]);
+            line = sr.ReadLine();
+            flightsList.Add(line);
+        }
+        // prevent lack one
+        FlightCode.Add(lineSplit[0]);
+        Airline.Add(lineSplit[1]);
+        ShowsearchFrom.Add(lineSplit[2]);
+        ShowsearchTo.Add(lineSplit[3]);
+        Day.Add(lineSplit[4]);
+        Time.Add(lineSplit[5]);
+        Cost.Add(lineSplit[7]);
+        // end
+        for(i=0; i < flightsList.Count();i++) {
+            if ((searchFrom.ToLower() == "any" || searchFrom.ToUpper() == ShowsearchFrom[i]) &&
+       (searchTo.ToLower() == "any" || searchTo.ToUpper() == ShowsearchTo[i]) &&
+       (searchDay.ToLower() == "any" || searchDay == Day[i])) //Check any flight
+            {
+                showFlight = flightsList[i];
+                ShowFlightCode = FlightCode[i];
+                ShowAirline = Airline[i];
+                ShowDay = Day[i];
+                ShowTime = Time[i];
+                ShowCost = Cost[i];
+                break;
+            }
+        }
+
+    }
+    public void Reservation()
+    {
+
+        FlightInfo flightInfo = new FlightInfo
+        {
+                Flight = showFlight,
+                FlightCode = ShowFlightCode,
+                Airline = ShowAirline,
+                Day = ShowDay,
+                Time = ShowTime,
+                Cost = ShowCost
+        };
+        ReservationManager reservationManager = new ReservationManager();
+        if (ShowName == "" || ShowCitizenship == "")
+        {
+            reservationcode = "name or citizenship can not be empty";
+        }
+        else
+        {
+            reservationcode = "reservation code:" + reservationManager.GenerateReservationCode();
+            string jsonFlightInfo = JsonSerializer.Serialize(flightInfo);
+            using(StreamWriter sw = new StreamWriter("../assignment2/reservation.json"))
+            {
+                sw.WriteLine(jsonFlightInfo);
+            }
+            //string relativePath = "reservation.json"; 
+            //string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativePath);
+            //File.AppendAllText(filePath, jsonFlightInfo);
+        }
+        ShowName = "";
+        ShowCitizenship = "";
+    }
+    public class ReservationManager
+    {
+        private Random random = new Random();
+
+        public string GenerateReservationCode()
+        {
+            const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const int numberOfDigits = 4; 
+            char randomLetter = letters[random.Next(letters.Length)];
+            int randomDigits = random.Next(1000, 10000);
+            string code = $"{randomLetter}{randomDigits:D4}";
+
+            return code;
+        }
+    }
+
+    public class FlightInfo
+    {
+        public string Flight { get; set; }
+        public string FlightCode { get; set; }
+        public string Airline { get; set; }
+        public string Day { get; set; }
+        public string Time { get; set; }
+        public string Cost { get; set; }
+    }
+}
